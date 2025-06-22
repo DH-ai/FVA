@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVoting } from '../contexts/VotingContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -16,15 +16,65 @@ const VotingPage: React.FC = () => {
   const [privacyVerified, setPrivacyVerified] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cameraAccess, setCameraAccess] = useState(false);
+
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   const { setPrivacyCheck, setVote } = useVoting();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+
+  useEffect(() => {
+      // Clean up camera stream when component unmounts
+      return () => {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+    }, [stream]);
+
+
   const handlePermissionGranted = async () => {
     setCurrentStep('privacy-check');
-    startPrivacyCheck();
+    
+    startPrivacyCheck(); //yNeed to figure out how to handle this properly
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+
+      setStream(mediaStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play();
+          setCameraAccess(true);
+          // setPrompt('Camera ready');
+          setTimeout(() => {
+
+            setCurrentStep('privacy-check');
+            
+          }, 1000);
+        };
+      }
+    } catch (err) {
+      console.error('Error accessing camera:', err);
+      setPermissionDenied(true);
+      // setPrompt('Camera access denied');
+    }
+
   };
 
   const handlePermissionDenied = () => {
@@ -137,8 +187,18 @@ const VotingPage: React.FC = () => {
       </div>
 
       {/* Simulated camera view for privacy check */}
+
+      
       <div className="relative w-full h-64 bg-black/50 rounded-lg border-2 border-white/20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-900/30 to-blue-900/30">
+          {/* Actual camera video feed */}
+          <video
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-cover"
+            playsInline
+            muted
+          />
+          
           {/* Privacy scanning overlay */}
           {isCheckingPrivacy && (
             <div className="absolute inset-0 flex items-center justify-center">

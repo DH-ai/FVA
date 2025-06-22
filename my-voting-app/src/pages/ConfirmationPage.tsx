@@ -17,26 +17,26 @@ const ConfirmationPage: React.FC = () => {
     {
       id: '1',
       name: 'Dr. Rajesh Kumar',
-      party: 'Progressive Democratic Party',
-      symbol: '🌟'
+      party: 'Bharatiya Log Democratic Party',
+      symbol: '🪷'
     },
     {
       id: '2',
-      name: 'Ms. Priya Sharma',
-      party: 'United People\'s Alliance',
-      symbol: '🌺'
+      name: 'Mr. Donald Thompson',
+      party: 'Repulican Unity Front',
+      symbol: '🐘'
     },
     {
       id: '3',
-      name: 'Mr. Arjun Singh',
-      party: 'National Development Front',
-      symbol: '🦅'
+      name: 'Mr. Narendra Singh',
+      party: 'National Communist Front',
+      symbol: '🔴'
     },
     {
       id: '4',
       name: 'Dr. Meera Patel',
-      party: 'Social Justice Movement',
-      symbol: '🌱'
+      party: 'Social Congress Alliance',
+      symbol:'🖐️'
     }
   ];
 

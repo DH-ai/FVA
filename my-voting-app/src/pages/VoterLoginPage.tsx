@@ -33,20 +33,31 @@ const VoterLoginPage: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Mock verification logic - accept any input
+    
     if (aadharNumber || panNumber || voterIdNumber) {
-      setVerificationStatus('verified');
+      
       setVoterData({
         aadharNumber,
         panNumber,
         voterIdNumber,
         isVerified: true
       });
-      
-      // Auto advance to OTP step after verification
-      setTimeout(() => {
+      if (aadharNumber!= '4201 5957 6572'){
+        setError('Invalid Aadhar Number Please enter Correct Aadhar Number');
+        setVerificationStatus('idle');
+        setIsLoading(false);
+        
+      }else{
+        setVerificationStatus('verified');
+        setTimeout(() => {
         setStep('otp');
         setIsLoading(false);
       }, 1000);
+      }
+      
+      // Auto advance to OTP step after verification
+
+      
     } else {
       setError('Please enter at least one identification number');
       setVerificationStatus('idle');
@@ -82,6 +93,14 @@ const VoterLoginPage: React.FC = () => {
   const sendOtp = async () => {
     if (!phoneNumber) {
       setError('Please enter your phone number');
+      return;
+    }
+    if (phoneNumber.length < 10) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+    if (phoneNumber!='8770320924') {
+      setError('Invalid Phone Number Please enter Correct Phone Number');
       return;
     }
     
@@ -156,7 +175,7 @@ const VoterLoginPage: React.FC = () => {
                       onChange={(e) => setAadharNumber(e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       placeholder="XXXX XXXX XXXX"
-                      maxLength={12}
+                      maxLength={14}
                     />
                   </div>
 

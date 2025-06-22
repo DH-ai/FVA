@@ -95,7 +95,7 @@ export const CameraPermissionModal: React.FC<CameraPermissionProps> = ({
                   <Camera className="w-2 h-2 text-white" />
                 </div>
                 <span className="text-white text-sm font-medium">
-                  futuristic-voting-system.manus.space wants to:
+                  futuristic-voting-system.Kushagra.space wants to:
                 </span>
               </div>
               <div className="ml-6 text-white/80 text-sm">
