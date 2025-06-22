@@ -1,5 +1,8 @@
 {
-  "name": "futuristic-voting-system",
+  "name": "my-voting-app",
+  "description": "A voting application built with React, Radix UI, and Tailwind CSS.",
+  "author": "Dhruv",
+  "license": "MIT",
   "private": true,
   "version": "0.0.0",
   "type": "module",
