@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle, FuturisticCard } from '../components/CommonComponents';
 import { CheckCircle, Download, Home, Hash, Clock, User, Shield } from 'lucide-react';
+import APILogger from '../lib/logger';
 
 const ReceiptPage: React.FC = () => {
   const [blockchainHash, setBlockchainHash] = useState('');
@@ -59,10 +60,31 @@ const ReceiptPage: React.FC = () => {
       return hash;
     };
     
-    setBlockchainHash(generateHash());
+    APILogger.request('GET', `/api/v1/blockchain/verify/${vote.voteId}`, null);
+    
+    const hash = generateHash();
+    
+    setTimeout(() => {
+      APILogger.response(`/api/v1/blockchain/verify/${vote.voteId}`, 200, {
+        success: true,
+        voteId: vote.voteId,
+        blockchainHash: hash,
+        blockNumber: 18547892,
+        networkId: 'ethereum-mainnet',
+        confirmations: 12,
+        status: 'VERIFIED',
+        gasUsed: 21000
+      }, 500);
+      setBlockchainHash(hash);
+    }, 500);
   }, []);
 
   const downloadReceipt = () => {
+    APILogger.request('GET', `/api/v1/receipts/generate/${vote.voteId}`, {
+      format: 'JSON',
+      includeBlockchain: true
+    });
+    
     // Mock download functionality
     const receiptData = {
       voteId: vote.voteId,
@@ -73,6 +95,13 @@ const ReceiptPage: React.FC = () => {
       status: 'Confirmed'
     };
     
+    APILogger.response(`/api/v1/receipts/generate/${vote.voteId}`, 200, {
+      success: true,
+      receiptGenerated: true,
+      downloadUrl: `/downloads/vote-receipt-${vote.voteId}.json`,
+      expiresIn: 3600
+    }, 200);
+    
     const blob = new Blob([JSON.stringify(receiptData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -82,9 +111,16 @@ const ReceiptPage: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    APILogger.success('Receipt downloaded successfully', { voteId: vote.voteId });
   };
 
   const returnHome = () => {
+    APILogger.info('User session ending', {
+      action: 'RETURN_HOME',
+      voteCompleted: true,
+      voteId: vote.voteId
+    });
     resetVotingData();
     navigate('/');
   };

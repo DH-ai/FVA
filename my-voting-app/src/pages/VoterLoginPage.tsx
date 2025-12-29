@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageToggle, FuturisticCard, LoadingSpinner } from '../components/CommonComponents';
 import { CreditCard, IdCard, Phone, Shield, CheckCircle, ArrowLeft } from 'lucide-react';
+import APILogger from '../lib/logger';
 
 const VoterLoginPage: React.FC = () => {
   const [step, setStep] = useState<'verification' | 'otp'>('verification');
@@ -29,6 +30,13 @@ const VoterLoginPage: React.FC = () => {
     setIsLoading(true);
     setVerificationStatus('verifying');
 
+    // Log the verification request
+    APILogger.request('POST', '/api/v1/voter/verify-identity', {
+      aadharNumber: aadharNumber ? aadharNumber.replace(/\d{4}(?=\d)/g, '****') : null,
+      panNumber: panNumber ? panNumber.replace(/./g, (c, i) => i < 5 ? c : '*') : null,
+      voterIdNumber: voterIdNumber ? '***' + voterIdNumber.slice(-4) : null
+    });
+
     // Simulate verification delay
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -43,11 +51,25 @@ const VoterLoginPage: React.FC = () => {
         isVerified: true
       });
       if (aadharNumber!= '4201 5957 6572'){
+        APILogger.response('/api/v1/voter/verify-identity', 400, {
+          success: false,
+          error: 'INVALID_AADHAR',
+          message: 'Aadhar number not found in UIDAI database',
+          searchedRecords: 1250000000
+        }, 2000);
         setError('Invalid Aadhar Number Please enter Correct Aadhar Number');
         setVerificationStatus('idle');
         setIsLoading(false);
         
       }else{
+        APILogger.response('/api/v1/voter/verify-identity', 200, {
+          success: true,
+          voterFound: true,
+          constituency: 'Mumbai North - MH-15',
+          boothNumber: 'B-2847',
+          eligibilityStatus: 'ELIGIBLE',
+          lastVotedElection: null
+        }, 2000);
         setVerificationStatus('verified');
         setTimeout(() => {
         setStep('otp');
@@ -70,10 +92,23 @@ const VoterLoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
 
+    // Log OTP verification request
+    APILogger.request('POST', '/api/v1/auth/verify-otp', {
+      phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+      otpLength: otp.length
+    });
+
     // Simulate OTP verification delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     if (otp === '123456') {
+      APILogger.response('/api/v1/auth/verify-otp', 200, {
+        success: true,
+        message: 'OTP verified successfully',
+        sessionToken: 'sess_' + Date.now(),
+        expiresIn: 1800
+      }, 1500);
+      
       // Update voter data with phone number
       setVoterData({
         aadharNumber,
@@ -84,6 +119,12 @@ const VoterLoginPage: React.FC = () => {
       });
       navigate('/biometric-scan');
     } else {
+      APILogger.response('/api/v1/auth/verify-otp', 401, {
+        success: false,
+        error: 'INVALID_OTP',
+        message: 'The OTP entered is incorrect',
+        attemptsRemaining: 2
+      }, 1500);
       setError('Invalid OTP. Please enter 123456');
     }
     
@@ -100,6 +141,14 @@ const VoterLoginPage: React.FC = () => {
       return;
     }
     if (phoneNumber!='8770320924') {
+      APILogger.request('POST', '/api/v1/auth/send-otp', {
+        phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*')
+      });
+      APILogger.response('/api/v1/auth/send-otp', 400, {
+        success: false,
+        error: 'PHONE_NOT_REGISTERED',
+        message: 'Phone number not linked to any voter account'
+      }, 800);
       setError('Invalid Phone Number Please enter Correct Phone Number');
       return;
     }
@@ -107,8 +156,21 @@ const VoterLoginPage: React.FC = () => {
     setIsLoading(true);
     setError('');
     
+    // Log OTP send request
+    APILogger.request('POST', '/api/v1/auth/send-otp', {
+      phoneNumber: phoneNumber.replace(/\d(?=\d{4})/g, '*'),
+      channel: 'SMS'
+    });
+    
     // Simulate sending OTP
     await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    APILogger.response('/api/v1/auth/send-otp', 200, {
+      success: true,
+      message: 'OTP sent successfully',
+      expiresIn: 300,
+      resendAvailableIn: 60
+    }, 1000);
     
     setIsLoading(false);
     alert('OTP sent to your phone number. Use 123456 to verify.');

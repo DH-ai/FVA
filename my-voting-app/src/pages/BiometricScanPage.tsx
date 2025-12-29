@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { LanguageToggle, FuturisticCard, LoadingSpinner } from '../components/CommonComponents';
 import CameraPermissionModal from '../components/CameraPermissionModal';
 import { Camera, Eye, CheckCircle, ArrowLeft, Scan, X } from 'lucide-react';
+import APILogger from '../lib/logger';
 
 type ScanStep = 'permission-request' | 'camera-access' | 'face-scan' | 'retina-scan' | 'completed';
 
@@ -35,6 +36,11 @@ const BiometricScanPage: React.FC = () => {
   const handlePermissionGranted = async () => {
     setCurrentStep('camera-access');
     setPrompt('Initializing camera...');
+    
+    APILogger.request('POST', '/api/v1/biometric/init-camera', {
+      deviceType: 'webcam',
+      resolution: '1280x720'
+    });
 
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -54,6 +60,14 @@ const BiometricScanPage: React.FC = () => {
           videoRef.current?.play();
           setCameraAccess(true);
           setPrompt('Camera ready');
+          
+          APILogger.response('/api/v1/biometric/init-camera', 200, {
+            success: true,
+            cameraId: 'cam_' + Date.now(),
+            resolution: '1280x720',
+            frameRate: 30
+          }, 800);
+          
           setTimeout(() => {
             setCurrentStep('face-scan');
           }, 1000);
@@ -61,6 +75,7 @@ const BiometricScanPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
+      APILogger.error('Camera access failed', err);
       setPermissionDenied(true);
       setPrompt('Camera access denied');
     }
@@ -75,16 +90,38 @@ const BiometricScanPage: React.FC = () => {
     setIsScanning(true);
     setScanProgress(0);
     setPrompt(t('biometric.facePrompt'));
+    
+    APILogger.request('POST', '/api/v1/biometric/face-scan', {
+      scanType: 'FACE_RECOGNITION',
+      algorithm: 'FaceNet-v2'
+    });
 
     // Simulate scanning progress
     for (let i = 0; i <= 100; i += 10) {
       setScanProgress(i);
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      if (i === 30) setPrompt('Hold still...');
-      if (i === 60) setPrompt('Almost done...');
-      if (i === 90) setPrompt('Finalizing...');
+      if (i === 30) {
+        setPrompt('Hold still...');
+        APILogger.info('Face detection in progress', { progress: i, status: 'DETECTING_LANDMARKS' });
+      }
+      if (i === 60) {
+        setPrompt('Almost done...');
+        APILogger.info('Face encoding in progress', { progress: i, status: 'ENCODING_FEATURES' });
+      }
+      if (i === 90) {
+        setPrompt('Finalizing...');
+        APILogger.info('Matching against database', { progress: i, status: 'MATCHING' });
+      }
     }
+
+    APILogger.response('/api/v1/biometric/face-scan', 200, {
+      success: true,
+      matchScore: 0.9847,
+      confidence: 'HIGH',
+      landmarksDetected: 68,
+      faceId: 'face_' + Date.now()
+    }, 2000);
 
     setPrompt('Face scan completed');
     setIsScanning(false);
@@ -99,15 +136,34 @@ const BiometricScanPage: React.FC = () => {
     setIsScanning(true);
     setScanProgress(0);
     setPrompt('Place your left eye close to the scanner');
+    
+    APILogger.request('POST', '/api/v1/biometric/retina-scan', {
+      scanType: 'RETINA_PATTERN',
+      eyePosition: 'LEFT'
+    });
 
     // Simulate retina scanning
     for (let i = 0; i <= 100; i += 15) {
       setScanProgress(i);
       await new Promise(resolve => setTimeout(resolve, 600));
 
-      if (i === 45) setPrompt('Move forward slightly...');
-      if (i === 75) setPrompt('Perfect position...');
+      if (i === 45) {
+        setPrompt('Move forward slightly...');
+        APILogger.info('Retina scan in progress', { progress: i, status: 'CAPTURING_PATTERN' });
+      }
+      if (i === 75) {
+        setPrompt('Perfect position...');
+        APILogger.info('Retina pattern analysis', { progress: i, status: 'ANALYZING_VESSELS' });
+      }
     }
+
+    APILogger.response('/api/v1/biometric/retina-scan', 200, {
+      success: true,
+      matchScore: 0.9912,
+      confidence: 'VERY_HIGH',
+      vesselPointsMatched: 247,
+      retinaId: 'retina_' + Date.now()
+    }, 4200);
 
     setPrompt('Retina scan completed');
     setIsScanning(false);

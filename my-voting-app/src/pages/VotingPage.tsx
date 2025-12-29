@@ -7,6 +7,7 @@ import { LanguageToggle, FuturisticCard, LoadingSpinner } from '../components/Co
 import CameraPermissionModal from '../components/CameraPermissionModal';
 import { Camera, Shield, CheckCircle, ArrowLeft, Vote, User, X } from 'lucide-react';
 import { Candidate } from '../types';
+import APILogger from '../lib/logger';
 
 type VotingStep = 'permission-request' | 'privacy-check' | 'voting' | 'vote-cast';
 
@@ -119,8 +120,22 @@ const VotingPage: React.FC = () => {
   const startPrivacyCheck = async () => {
     setIsCheckingPrivacy(true);
     
+    APILogger.request('POST', '/api/v1/voting/privacy-check', {
+      checkType: 'SINGLE_PERSON_DETECTION',
+      algorithm: 'YOLO-v8'
+    });
+    
     // Simulate camera access and privacy verification
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    APILogger.response('/api/v1/voting/privacy-check', 200, {
+      success: true,
+      personsDetected: 1,
+      isAlone: true,
+      confidenceScore: 0.97,
+      noCoercionDetected: true,
+      ambientLightLevel: 'ADEQUATE'
+    }, 2000);
     
     // Mock privacy verification - always passes
     setPrivacyVerified(true);
@@ -132,6 +147,8 @@ const VotingPage: React.FC = () => {
     
     setIsCheckingPrivacy(false);
     
+    APILogger.success('Privacy verification passed', { canProceedToVote: true });
+    
     // Auto advance to voting after verification
     setTimeout(() => {
       setCurrentStep('voting');
@@ -139,6 +156,12 @@ const VotingPage: React.FC = () => {
   };
 
   const handleVoteSelection = (candidateId: string) => {
+    const selectedCandidateInfo = candidates.find(c => c.id === candidateId);
+    APILogger.info('Candidate selected', {
+      candidateId,
+      candidateName: selectedCandidateInfo?.name,
+      party: selectedCandidateInfo?.party
+    });
     setSelectedCandidate(candidateId);
   };
 
@@ -147,11 +170,29 @@ const VotingPage: React.FC = () => {
     
     setIsSubmitting(true);
     
+    const selectedCandidateInfo = candidates.find(c => c.id === selectedCandidate);
+    
+    APILogger.request('POST', '/api/v1/voting/cast-vote', {
+      candidateId: selectedCandidate,
+      candidateName: selectedCandidateInfo?.name,
+      encryptionMethod: 'AES-256-GCM',
+      hashAlgorithm: 'SHA-256'
+    });
+    
     // Simulate vote submission
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Generate mock vote ID
     const voteId = `VT${Date.now().toString().slice(-8)}`;
+    
+    APILogger.response('/api/v1/voting/cast-vote', 200, {
+      success: true,
+      voteId,
+      blockchainTxId: '0x' + Math.random().toString(16).slice(2, 18),
+      encryptedVoteHash: 'sha256_' + Math.random().toString(36).slice(2, 14),
+      timestamp: new Date().toISOString(),
+      status: 'PENDING_CONFIRMATION'
+    }, 2000);
     
     // Save vote data
     setVote({

@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle, FuturisticCard, LoadingSpinner } from '../components/CommonComponents';
 import { CheckCircle, ArrowLeft, Vote, AlertTriangle } from 'lucide-react';
+import APILogger from '../lib/logger';
 
 const ConfirmationPage: React.FC = () => {
   const [isConfirming, setIsConfirming] = useState(false);
@@ -51,8 +52,34 @@ const ConfirmationPage: React.FC = () => {
   const confirmVote = async () => {
     setIsConfirming(true);
     
+    APILogger.request('POST', '/api/v1/voting/confirm-vote', {
+      voteId: vote.voteId,
+      candidateId: vote.candidateId,
+      timestamp: vote.timestamp.toISOString(),
+      confirmationMethod: 'USER_ACTION'
+    });
+    
     // Simulate confirmation processing
     await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const blockchainHash = '0x' + Array.from({ length: 64 }, () => 
+      Math.floor(Math.random() * 16).toString(16)
+    ).join('');
+    
+    APILogger.response('/api/v1/voting/confirm-vote', 200, {
+      success: true,
+      voteId: vote.voteId,
+      status: 'CONFIRMED',
+      blockchainHash,
+      blockNumber: Math.floor(Math.random() * 1000000) + 18000000,
+      gasUsed: 21000,
+      confirmations: 1
+    }, 2000);
+    
+    APILogger.success('Vote permanently recorded on blockchain', {
+      voteId: vote.voteId,
+      blockchainHash
+    });
     
     // Update vote as confirmed
     setVote({

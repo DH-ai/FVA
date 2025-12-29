@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageToggle, ComingSoonBadge, FuturisticCard } from '../components/CommonComponents';
 import { Eye, EyeOff, Vote, Shield, Zap } from 'lucide-react';
+import APILogger from '../lib/logger';
 
 const LandingPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -19,10 +20,37 @@ const LandingPage: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Log initial connection to backend
+    APILogger.request('GET', '/api/v1/health', null);
+    setTimeout(() => {
+      APILogger.response('/api/v1/health', 200, {
+        status: 'healthy',
+        version: '1.0.0',
+        services: {
+          database: 'connected',
+          blockchain: 'connected',
+          authentication: 'ready',
+          biometricService: 'ready'
+        },
+        uptime: '99.99%',
+        serverTime: new Date().toISOString()
+      }, 120);
+      
+      APILogger.info('Voting system initialized', {
+        environment: 'production',
+        electionId: 'ELECTION_2025_001',
+        pollingBoothId: 'BOOTH_MH_2847'
+      });
+    }, 300);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    APILogger.info('Login attempt initiated', { username });
 
     // Simulate loading delay for better UX
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -30,8 +58,10 @@ const LandingPage: React.FC = () => {
     const success = login(username, password);
     
     if (success) {
+      APILogger.success('User authenticated, redirecting to voter verification', { username });
       navigate('/voter-login');
     } else {
+      APILogger.warning('Login failed', { username, reason: 'Invalid credentials' });
       setError('Invalid credentials. Try: admin/admin123, voter1/vote123, or demo/demo123');
     }
     
